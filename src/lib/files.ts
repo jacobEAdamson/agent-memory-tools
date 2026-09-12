@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const SKIP_DIRS = new Set(['history', 'node_modules', '.git', '.github']);
+const SKIP_DIRS = new Set(['node_modules', '.git', '.github']);
 
 export interface MemoryFile {
   name: string;
@@ -72,18 +72,6 @@ export function readMemIndex(dirPath: string): string | null {
   return readFileContent(indexPath);
 }
 
-export function listHistoryDirs(memoryPath: string): string[] {
-  const entries = fs.readdirSync(memoryPath, { withFileTypes: true });
-  return entries
-    .filter((e) => e.isDirectory() && e.name === 'history')
-    .map((e) => path.join(memoryPath, e.name));
-}
-
-export function countHistoryEntries(historyDir: string): number {
-  if (!fs.existsSync(historyDir)) return 0;
-  return fs.readdirSync(historyDir).length;
-}
-
 export function hasNamingViolation(fileName: string): boolean {
   if (fileName.endsWith('.lore.md')) return false;
   if (!fileName.endsWith('.md')) return false;
@@ -97,4 +85,19 @@ const LORE_DATE_PATTERN = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/m;
 
 export function countLoreEntries(content: string): number {
   return content.split('\n').filter((line) => LORE_DATE_PATTERN.test(line)).length;
+}
+
+export function parseFrontmatter(content: string): Record<string, string> | null {
+  if (!content.startsWith('---\n')) return null;
+  const endIndex = content.indexOf('\n---\n', 3);
+  if (endIndex === -1) return null;
+  const frontmatter = content.slice(4, endIndex);
+  const fields: Record<string, string> = {};
+  for (const line of frontmatter.split('\n')) {
+    const match = line.match(/^(\w+):\s*(.*)/);
+    if (match) {
+      fields[match[1]] = match[2].trim();
+    }
+  }
+  return fields;
 }

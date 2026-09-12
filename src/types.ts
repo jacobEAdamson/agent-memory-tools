@@ -12,9 +12,10 @@ export interface TokenEstimateResult {
   severity: Severity;
 }
 
-export interface HistoryConsolidationIssue {
-  dir: string;
-  entryCount: number;
+export interface FrontmatterIssue {
+  file: string;
+  missingField?: 'kind' | 'updated_at' | 'both';
+  error?: string;
 }
 
 export interface IndexCompletenessIssue {
@@ -43,7 +44,7 @@ export interface ConfigCheckResult {
 export interface LintResults {
   tokenEstimates: TokenEstimateResult[];
   loreEntryCounts: LoreEntryCountIssue[];
-  historyConsolidationIssues: HistoryConsolidationIssue[];
+  frontmatterIssues: FrontmatterIssue[];
   indexCompletenessIssues: IndexCompletenessIssue[];
   subdirMissingIndexIssues: SubdirMissingIndexIssue[];
   rootSubdirListingIssues: RootSubdirListingIssue[];

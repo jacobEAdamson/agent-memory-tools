@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readMemoryFiles, readFileContent, hasNamingViolation, countHistoryEntries, countLoreEntries, listSubdirs, readMemIndex } from '@/lib/files.js';
+import { readMemoryFiles, readFileContent, hasNamingViolation, countLoreEntries, listSubdirs, readMemIndex, parseFrontmatter } from '@/lib/files.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -49,12 +49,10 @@ describe('files', () => {
       fs.rmSync(dir, { recursive: true });
     });
 
-    it('skips history, node_modules, .git dirs', () => {
+    it('skips node_modules, .git dirs', () => {
       const dir = tmpDir();
-      fs.mkdirSync(path.join(dir, 'history'));
       fs.mkdirSync(path.join(dir, 'node_modules'));
       fs.mkdirSync(path.join(dir, '.git'));
-      fs.writeFileSync(path.join(dir, 'history', 'entry.md'), 'x');
       fs.writeFileSync(path.join(dir, 'root.md'), 'x');
 
       const files = readMemoryFiles(dir);
@@ -76,10 +74,8 @@ describe('files', () => {
       const dir = tmpDir();
       fs.mkdirSync(path.join(dir, 'mud'));
       fs.mkdirSync(path.join(dir, 'backend'));
-      fs.mkdirSync(path.join(dir, 'history'));
       const subdirs = listSubdirs(dir);
       expect(subdirs).toEqual(expect.arrayContaining(['mud', 'backend']));
-      expect(subdirs).not.toContain('history');
       fs.rmSync(dir, { recursive: true });
     });
   });
@@ -143,17 +139,33 @@ describe('files', () => {
     });
   });
 
-  describe('countHistoryEntries', () => {
-    it('returns 0 for non-existent dir', () => {
-      expect(countHistoryEntries('/nonexistent')).toBe(0);
+  describe('parseFrontmatter', () => {
+    it('returns null for content without frontmatter', () => {
+      expect(parseFrontmatter('just content')).toBeNull();
+      expect(parseFrontmatter('---\nnot closed')).toBeNull();
     });
 
-    it('counts entries in history dir', () => {
-      const dir = tmpDir();
-      fs.writeFileSync(path.join(dir, '1.md'), '');
-      fs.writeFileSync(path.join(dir, '2.md'), '');
-      expect(countHistoryEntries(dir)).toBe(2);
-      fs.rmSync(dir, { recursive: true });
+    it('parses frontmatter fields', () => {
+      const content = [
+        '---',
+        'kind: lean',
+        'updated_at: 2026-09-12T00:00:00Z',
+        'summary: test file',
+        '---',
+        '',
+        '# Content here',
+      ].join('\n');
+      const fm = parseFrontmatter(content);
+      expect(fm).not.toBeNull();
+      expect(fm?.kind).toBe('lean');
+      expect(fm?.updated_at).toBe('2026-09-12T00:00:00Z');
+      expect(fm?.summary).toBe('test file');
+    });
+
+    it('returns empty object for empty frontmatter', () => {
+      const content = '---\n---\n\ncontent';
+      const fm = parseFrontmatter(content);
+      expect(fm).toEqual({});
     });
   });
 

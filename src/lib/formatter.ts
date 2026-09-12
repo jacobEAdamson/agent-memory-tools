@@ -58,11 +58,11 @@ export function formatReport(report: LintReport, out: PrettyPrint): void {
     out.blank();
   }
 
-  if (r.historyConsolidationIssues.length > 0) {
-    out.add('History Consolidation Needed:');
+  if (r.frontmatterIssues.length > 0) {
+    out.add('Frontmatter Errors:');
     out.group(() => {
-      for (const h of r.historyConsolidationIssues) {
-        out.add(`⚠ ${h.dir}: ${h.entryCount} entries (max 5)`);
+      for (const f of r.frontmatterIssues) {
+        out.add(`✖ ${f.file}: ${f.error}`);
       }
     });
     out.blank();

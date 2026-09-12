@@ -20,14 +20,6 @@ function writeMem(dir: string, name: string, content: string): void {
   fs.writeFileSync(filePath, content, 'utf-8');
 }
 
-function writeHistory(dir: string, count: number): void {
-  const hDir = path.join(dir, 'history');
-  fs.mkdirSync(hDir);
-  for (let i = 0; i < count; i++) {
-    fs.writeFileSync(path.join(hDir, `entry-${i}.md`), '', 'utf-8');
-  }
-}
-
 describe('rules', () => {
   describe('lintMemoryDir', () => {
     it('passes with empty memory dir', () => {
@@ -42,7 +34,7 @@ describe('rules', () => {
     it('passes with clean well-formed files', () => {
       const { dir } = createFixture();
       writeMem(dir, 'index.md', '| File | |\n|---|---|\n| `backend.md` | |');
-      writeMem(dir, 'backend.md', 'small content');
+      writeMem(dir, 'backend.md', '---\nkind: lean\nupdated_at: 2026-09-12T00:00:00Z\n---\n\nsmall content');
       const report = lintMemoryDir(dir);
       expect(report.passed).toBe(true);
       expect(report.summary.errors).toBe(0);
@@ -87,7 +79,7 @@ describe('rules', () => {
       const { dir } = createFixture();
       writeMem(dir, 'index.md', '| File | |\n|---|---|\n| `mud/` | |');
       writeMem(path.join(dir, 'mud'), 'index.md', '| File | |\n|---|---|\n| `client.md` | |');
-      writeMem(path.join(dir, 'mud'), 'client.md', 'content');
+      writeMem(path.join(dir, 'mud'), 'client.md', '---\nkind: lean\nupdated_at: 2026-09-12T00:00:00Z\n---\n\ncontent');
       const report = lintMemoryDir(dir);
       expect(report.passed).toBe(true);
       fs.rmSync(dir, { recursive: true });
@@ -116,13 +108,14 @@ describe('rules', () => {
       fs.rmSync(dir, { recursive: true });
     });
 
-    it('flags history consolidation', () => {
+    it('flags missing frontmatter', () => {
       const { dir } = createFixture();
-      writeMem(dir, 'index.md', '| File | |\n|---|---|');
-      writeHistory(dir, 6);
+      writeMem(dir, 'index.md', '| File | |\n|---|---|\n| `nofm.md` | |');
+      writeMem(dir, 'nofm.md', 'content without frontmatter');
       const report = lintMemoryDir(dir);
-      expect(report.results.historyConsolidationIssues).toHaveLength(1);
-      expect(report.results.historyConsolidationIssues[0].entryCount).toBe(6);
+      expect(report.results.frontmatterIssues).toHaveLength(1);
+      expect(report.results.frontmatterIssues[0].file).toBe('nofm.md');
+      expect(report.summary.errors).toBeGreaterThan(0);
       fs.rmSync(dir, { recursive: true });
     });
 

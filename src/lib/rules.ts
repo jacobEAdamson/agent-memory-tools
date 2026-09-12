@@ -1,7 +1,7 @@
 import path from 'node:path';
 import type { LintResults, LintReport } from '@/types.js';
 import { estimateTokens, severityFromTokenCount } from '@/lib/token-estimate.js';
-import { readMemoryFiles, readFileContent, listSubdirs, readMemIndex, listHistoryDirs, countHistoryEntries, countLoreEntries, hasNamingViolation } from '@/lib/files.js';
+import { readMemoryFiles, readFileContent, listSubdirs, readMemIndex, countLoreEntries, hasNamingViolation, parseFrontmatter } from '@/lib/files.js';
 import { checkConfig } from '@/lib/config-check.js';
 import { LORE_ENTRY_WARN } from '@/lib/formatter.js';
 
@@ -9,7 +9,7 @@ export function lintMemoryDir(memoryPath: string): LintReport {
   const results: LintResults = {
     tokenEstimates: [],
     loreEntryCounts: [],
-    historyConsolidationIssues: [],
+    frontmatterIssues: [],
     indexCompletenessIssues: [],
     subdirMissingIndexIssues: [],
     rootSubdirListingIssues: [],
@@ -57,16 +57,28 @@ export function lintMemoryDir(memoryPath: string): LintReport {
     }
   }
 
-  // Rule 3: History consolidation
-  const historyDirs = listHistoryDirs(memoryPath);
-  for (const dir of historyDirs) {
-    const count = countHistoryEntries(dir);
-    if (count > 5) {
-      results.historyConsolidationIssues.push({
-        dir: path.relative(memoryPath, dir),
-        entryCount: count,
-      });
-      warnings++;
+  // Rule 3: Frontmatter validation
+  for (const file of mdFiles) {
+    if (file.name === 'index.md') continue;
+    const content = readFileContent(file.path);
+    const fm = parseFrontmatter(content);
+
+    if (fm === null) {
+      results.frontmatterIssues.push({ file: file.relativePath, missingField: 'both', error: 'no frontmatter found' });
+      errors++;
+      continue;
+    }
+
+    const missing: string[] = [];
+    if (!fm.kind) missing.push('kind');
+    if (!fm.updated_at) missing.push('updated_at');
+
+    if (missing.length === 2) {
+      results.frontmatterIssues.push({ file: file.relativePath, missingField: 'both', error: `missing: ${missing.join(', ')}` });
+      errors++;
+    } else if (missing.length === 1) {
+      results.frontmatterIssues.push({ file: file.relativePath, missingField: missing[0] as 'kind' | 'updated_at', error: `missing: ${missing.join(', ')}` });
+      errors++;
     }
   }
 

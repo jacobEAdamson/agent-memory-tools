@@ -16,14 +16,6 @@ function writeMem(dir: string, name: string, content: string): void {
   fs.writeFileSync(filePath, content, 'utf-8');
 }
 
-function writeHistory(dir: string, count: number): void {
-  const hDir = path.join(dir, 'history');
-  fs.mkdirSync(hDir);
-  for (let i = 0; i < count; i++) {
-    fs.writeFileSync(path.join(hDir, `entry-${i}.md`), '', 'utf-8');
-  }
-}
-
 function makeLines(): { write: (l: string) => void; lines: string[] } {
   const lines: string[] = [];
   return { write: (l: string): void => { lines.push(l); }, lines };
@@ -93,8 +85,8 @@ describe('PrettyPrint', () => {
 describe('formatReportString', () => {
   it('returns PASSED string for passing report', () => {
     const dir = tmpDir();
-    writeMem(dir, 'index.md', '| File | |');
-    writeMem(dir, 'clean.md', 'small');
+    writeMem(dir, 'index.md', '| File | |\n|---|---|\n| `clean.md` | |');
+    writeMem(dir, 'clean.md', '---\nkind: lean\nupdated_at: 2026-09-12T00:00:00Z\n---\n\nsmall');
     const report = lintMemoryDir(dir);
     const output = formatReportString(report);
     expect(output).toContain('PASSED');
@@ -103,7 +95,7 @@ describe('formatReportString', () => {
 
   it('includes error and warning counts', () => {
     const dir = tmpDir();
-    writeMem(dir, 'index.md', '| File | |');
+    writeMem(dir, 'index.md', '| File | |\n|---|---|');
     writeMem(dir, 'evolution.md', 'bad name');
     const report = lintMemoryDir(dir);
     const output = formatReportString(report);
@@ -114,11 +106,10 @@ describe('formatReportString', () => {
 
   it('includes all issue sections when issues exist', () => {
     const dir = tmpDir();
-    writeMem(dir, 'index.md', '| File | |');
+    writeMem(dir, 'index.md', '| File | |\n|---|---|');
     writeMem(dir, 'large.md', 'x'.repeat(100_000));
     const entries = Array.from({ length: 60 }, (_, i) => `2026-09-12 10:${(30 + i).toString().padStart(2, '0')} entry ${i + 1}`);
     writeMem(dir, 'topic.lore.md', entries.join('\n'));
-    writeHistory(dir, 6);
     writeMem(dir, 'unlisted.md', 'content');
     writeMem(dir, 'evolution.md', 'bad name');
     fs.mkdirSync(path.join(dir, 'mud'));
@@ -129,7 +120,7 @@ describe('formatReportString', () => {
     expect(output).toContain('FAILED');
     expect(output).toContain('Token Estimates');
     expect(output).toContain('Lore Entry Counts');
-    expect(output).toContain('History Consolidation');
+    expect(output).toContain('Frontmatter Errors');
     expect(output).toContain('Subdirectories Missing index.md');
     expect(output).toContain('Naming Violations');
     fs.rmSync(dir, { recursive: true });
@@ -139,8 +130,8 @@ describe('formatReportString', () => {
 describe('formatJsonReport', () => {
   it('returns valid JSON', () => {
     const dir = tmpDir();
-    writeMem(dir, 'index.md', '| File | |');
-    writeMem(dir, 'f1.md', 'x');
+    writeMem(dir, 'index.md', '| File | |\n|---|---|\n| `f1.md` | |');
+    writeMem(dir, 'f1.md', '---\nkind: lean\nupdated_at: 2026-09-12T00:00:00Z\n---\n\nx');
     const report = lintMemoryDir(dir);
     const json = formatJsonReport(report);
     const parsed = JSON.parse(json) as Record<string, unknown>;
