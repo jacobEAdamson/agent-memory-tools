@@ -35,10 +35,10 @@ describe('config-check', () => {
     fs.rmSync(dir, { recursive: true });
   });
 
-  it('detects memories-architecture.md reference', () => {
+  it('detects memory-architecture skill reference', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'amt-test-'));
     const filePath = path.join(dir, 'AGENTS.md');
-    fs.writeFileSync(filePath, 'Read memories-architecture.md rules\n');
+    fs.writeFileSync(filePath, 'load the memory-architecture skill\n');
 
     const result = checkConfig(filePath);
     expect(result.exists).toBe(true);

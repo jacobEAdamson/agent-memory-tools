@@ -12,7 +12,7 @@ export function checkConfig(configPath?: string): ConfigCheckResult {
   }
 
   const content = readFileContent(resolvedPath);
-  const hasHardLoad = content.includes('memories-architecture.md') || content.includes('AGENTS.md');
+  const hasHardLoad = content.includes('memory-architecture') || content.includes('AGENTS.md');
 
   return { exists: true, hasHardLoad };
 }
